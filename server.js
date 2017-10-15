@@ -17,8 +17,10 @@ app.use(bodyParser.json());
 var port = process.env.PORT || 8080;        // set our port
 
 // DATABASE SETUP
+var mongoHost = process.env.MONGO_HOST || '127.0.0.1';
+
 var mongoose   = require('mongoose');
-mongoose.connect('mongodb://127.0.0.1/bears'); // connect to our database
+mongoose.connect(`mongodb://${mongoHost}/bears`); // connect to our database
 
 // Handle the connection event
 var db = mongoose.connection;
@@ -55,7 +57,12 @@ router.route('/bears')
 
     bear.save((err) => {
       if (err) {
-        res.status(400).send(err);
+        if (err.name === "ValidationError") {
+          res.status(400).send(err);
+          return;
+        }
+
+        throw err;
       }
 
       res.json({
@@ -87,7 +94,7 @@ router.route('/bears')
 
         var nameFilter = req.query.name || "";
 
-        if (nameFilter != "") {
+        if (nameFilter !== "") {
           filters.name = nameFilter
         }
 
