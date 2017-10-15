@@ -17,7 +17,7 @@ var port = process.env.PORT || 8080;        // set our port
 
 // DATABASE SETUP
 var mongoose   = require('mongoose');
-mongoose.connect('mongodb://node:node@novus.modulusmongo.net:27017/Iganiq8o'); // connect to our database
+mongoose.connect('mongodb://127.0.0.1/bears'); // connect to our database
 
 // Handle the connection event
 var db = mongoose.connection;
@@ -26,6 +26,9 @@ db.on('error', console.error.bind(console, 'connection error:'));
 db.once('open', () => {
   console.log("DB connection alive");
 });
+
+// Bear models lives here
+var Bear = require('./models/bear');
 
 // ROUTES FOR OUR API
 // =============================================================================
@@ -41,7 +44,20 @@ router.route('/bears')
   // create a bear (accessed at POST http://localhost:8080/bears)
   .post(function(req, res) {
 
-    res.status(400).send('{}');
+    var bear = new Bear();    // create a new instance of the Bear model
+    bear.name = req.body.name;  // set the bears name (comes from the request)
+
+    bear.save(function(err) {
+      if (err) {
+        res.status(400).send(err);
+      }
+
+      res.json({
+        message: 'Bear successfully added',
+        bear: bear
+      });
+    });
+
   })
 
   // get all the bears (accessed at GET http://localhost:8080/api/bears)

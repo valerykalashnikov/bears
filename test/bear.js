@@ -10,8 +10,17 @@ var should = chai.should();
 
 chai.use(chaiHttp);
 
+var Bear = require('../models/bear');
+
 //Our parent block
 describe('Bears', () => {
+
+  //Before each test we empty the database
+  beforeEach((done) => {
+    var bear = new Bear();
+    bear.collection.drop()
+    done()
+  });
 
   describe('/GET bears', () => {
       it('should GET all the bears', (done) => {
@@ -26,6 +35,7 @@ describe('Bears', () => {
   });
 
   describe('/POST bear', ()=>{
+
     it('it should not create bear without name field',(done) => {
       var bear = {}
       chai.request(server)
@@ -35,10 +45,13 @@ describe('Bears', () => {
             res.should.have.status(400);
             res.body.should.be.a('object');
             res.body.should.have.property('errors');
+            res.body.errors.should.have.property('name');
+            res.body.errors.name.should.have.property('type').eql('required');
           done();
         });
     });
-    it('it should not create bear without name field',(done) => {
+
+    it('it should create bear',(done) => {
       var bear = {
         name: "test bear"
       }
