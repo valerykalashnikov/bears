@@ -7,6 +7,7 @@
 var express    = require('express');        // call express
 var app        = express();                 // define our app using express
 var bodyParser = require('body-parser');
+var log4js = require('log4js');
 
 // configure app to use bodyParser()
 // this will let us get the data from a POST
@@ -26,6 +27,10 @@ db.on('error', console.error.bind(console, 'connection error:'));
 db.once('open', () => {
   console.log("DB connection alive");
 });
+
+var logger = log4js.getLogger();
+
+
 
 // Bear models lives here
 var Bear = require('./models/bear');
@@ -47,7 +52,7 @@ router.route('/bears')
     var bear = new Bear();    // create a new instance of the Bear model
     bear.name = req.body.name;  // set the bears name (comes from the request)
 
-    bear.save(function(err) {
+    bear.save((err) => {
       if (err) {
         res.status(400).send(err);
       }
@@ -62,10 +67,34 @@ router.route('/bears')
 
   // get all the bears (accessed at GET http://localhost:8080/api/bears)
   .get(function(req, res) {
-    res.json([]);
-  });
+    var page = req.query.page || 1;
+    var perPage = req.query.per_page || 10;
 
-// more routes for our API will happen here
+    var filters = {};
+
+    var skip = (page - 1) * perPage;
+    if (skip < 0) {
+      skip = 0;
+    }
+
+    var nameFilter = req.query.name || "";
+
+    if (nameFilter != "") {
+      filters.name = nameFilter
+    }
+
+    Bear
+    .find(filters)
+    .skip(skip)
+    .limit(perPage)
+    .exec((err, bears) => {
+      if (err) {
+        res.status(500).send("Internal error");
+        logger.error(`Unexpected error when getting bear list ${req.url} :  ${err}`);
+      }
+      res.json(bears);
+    });
+  });
 
 // REGISTER OUR ROUTES -------------------------------
 // all of our routes will be prefixed with /api
