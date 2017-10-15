@@ -69,13 +69,12 @@ router.route('/bears')
   // get all the bears (accessed at GET http://localhost:8080/api/bears)
   .get(function(req, res) {
     var ttl = 120;
-    
+
     redisClient.get(req.url, (err, bears) => {
       if (err) {
         throw err
       }
       if (!bears) {
-        console.log("Mongo");
         var page = req.query.page || 1;
         var perPage = req.query.per_page || 10;
 
@@ -107,7 +106,6 @@ router.route('/bears')
           });
         });
       } else {
-        console.log("Redis");
         res.json(JSON.parse(bears))
       }
     });
