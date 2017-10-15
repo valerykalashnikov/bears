@@ -7,7 +7,7 @@
 var express    = require('express');        // call express
 var app        = express();                 // define our app using express
 var bodyParser = require('body-parser');
-var log4js = require('log4js');
+var redis = require('redis');
 
 // configure app to use bodyParser()
 // this will let us get the data from a POST
@@ -28,9 +28,10 @@ db.once('open', () => {
   console.log("DB connection alive");
 });
 
-var logger = log4js.getLogger();
+var redisHost = process.env.REDIS_HOST || '127.0.0.1';
+var redisPort = process.env.REDIS_PORT || 6379;
 
-
+var redisClient = redis.createClient(redisPort, redisHost);
 
 // Bear models lives here
 var Bear = require('./models/bear');
@@ -67,32 +68,48 @@ router.route('/bears')
 
   // get all the bears (accessed at GET http://localhost:8080/api/bears)
   .get(function(req, res) {
-    var page = req.query.page || 1;
-    var perPage = req.query.per_page || 10;
-
-    var filters = {};
-
-    var skip = (page - 1) * perPage;
-    if (skip < 0) {
-      skip = 0;
-    }
-
-    var nameFilter = req.query.name || "";
-
-    if (nameFilter != "") {
-      filters.name = nameFilter
-    }
-
-    Bear
-    .find(filters)
-    .skip(skip)
-    .limit(perPage)
-    .exec((err, bears) => {
+    var ttl = 120;
+    
+    redisClient.get(req.url, (err, bears) => {
       if (err) {
-        res.status(500).send("Internal error");
-        logger.error(`Unexpected error when getting bear list ${req.url} :  ${err}`);
+        throw err
       }
-      res.json(bears);
+      if (!bears) {
+        console.log("Mongo");
+        var page = req.query.page || 1;
+        var perPage = req.query.per_page || 10;
+
+        var filters = {};
+
+        var skip = (page - 1) * perPage;
+        if (skip < 0) {
+          skip = 0;
+        }
+
+        var nameFilter = req.query.name || "";
+
+        if (nameFilter != "") {
+          filters.name = nameFilter
+        }
+
+        Bear
+        .find(filters)
+        .skip(skip)
+        .limit(perPage)
+        .exec((err, bears) => {
+          if (err) {
+            throw err
+          }
+
+          redisClient.setex(req.url, ttl, JSON.stringify(bears), (err) => {
+            if (err) {throw error;}
+            res.json(bears);
+          });
+        });
+      } else {
+        console.log("Redis");
+        res.json(JSON.parse(bears))
+      }
     });
   });
 

@@ -6,6 +6,16 @@ var BearSchema   = new Schema({
   createdAt: { type: Date, default: Date.now }
 });
 
+BearSchema.set('toJSON', {
+    transform: function(doc, ret, options) {
+        var retJson = {
+            name: ret.name,
+            createdAt: ret.createdAt,
+        };
+        return retJson;
+    }
+});
+
 // Sets the createdAt parameter equal to the current time
 BearSchema.pre('save', next => {
   now = new Date();

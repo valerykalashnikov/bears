@@ -6,11 +6,14 @@ var chai = require('chai');
 var chaiHttp = require('chai-http');
 var server = require('../server');
 var should = chai.should();
+var redis = require('redis');
 
 
 chai.use(chaiHttp);
 
 var Bear = require('../models/bear');
+
+var redisClient = redis.createClient(6379, '127.0.0.1');
 
 //Our parent block
 describe('Bears', () => {
@@ -19,6 +22,7 @@ describe('Bears', () => {
   beforeEach((done) => {
     var bear = new Bear();
     bear.collection.drop()
+    redisClient.flushall()
     done();
   });
 
@@ -87,7 +91,7 @@ describe('Bears', () => {
 
   describe('/POST bear', ()=>{
 
-    it('it should not create bear without name field',(done) => {
+    it('should not create bear without name field',(done) => {
       var bear = {}
       chai.request(server)
         .post('/api/bears')
@@ -102,7 +106,7 @@ describe('Bears', () => {
         });
     });
 
-    it('it should create bear',(done) => {
+    it('should create bear',(done) => {
       var bear = {
         name: "test bear"
       }
